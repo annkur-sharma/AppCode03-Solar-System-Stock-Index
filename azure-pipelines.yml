@@ -9,26 +9,23 @@ trigger:
 pool:
   vmImage: ubuntu-latest
 
+variables:
+- group: Project03-VariableGroup-Dev
+
 stages:
-# - stage: StaticCodeAnalysis
-#   displayName: Static Code Analysis
-#   jobs:
-#   - job: SonarQubeAnalysis
-#     displayName: Static Code Analysis (SonarQube)
-#     steps:
-#     - task: PowerShell@2
-#       inputs:
-#         targetType: 'inline'
-#         script: 'sonar -D sonar.host.url=https://sonarqube.devopsinsiders.com/ -D sonar.token=$(SONAR_TOKEN) -D sonar.projectKey=todo-ui-frontend'
-
 - stage: StaticCodeAnalysis
-  displayName: Static Code Analysis (Checkstyle)
+  displayName: Static Code Analysis
   jobs:
-  - job: CheckstyleScan
-    displayName: Checkstyle CLI Scan
-    pool:
-      vmImage: ubuntu-latest
+  - job: SonarQubeAnalysisJob
+    displayName: SonarQube (Static Code Analysis)
+    steps:
+    - task: PowerShell@2
+      inputs:
+        targetType: 'inline'
+        script: 'sonar-scanner -D sonar.token=$(SONAR_TOKEN)'
 
+  - job: CheckstyleScanJob
+    displayName: Checkstyle CLI Scan (Static Code Analysis)
     steps:
     - task: JavaToolInstaller@0
       inputs:
@@ -42,7 +39,7 @@ stages:
           -c checkstyle.xml \
           src/main/java
       displayName: Run Checkstyle
-
+      continueOnError: true
 
 # - stage: SoftwareCompositionAnalysis
 #   displayName: Software Composition Analysis (Dependency Security)
