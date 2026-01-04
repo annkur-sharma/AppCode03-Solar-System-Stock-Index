@@ -135,6 +135,6 @@ stages:
         sshEndpoint: 'SSH-SC-04JAN2026'
         runOptions: 'inline'
         inline: |
-          # sudo rm -r /var/lib/tomcat9/webapps/solar-system-stock-index.war
+          sudo rm -r /var/lib/tomcat9/webapps/solar-system-stock-index.war
           sudo cp /tmp/app/solar-system-stock-index.war /var/lib/tomcat9/webapps
         readyTimeout: '20000'
