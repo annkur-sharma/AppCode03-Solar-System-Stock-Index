@@ -49,12 +49,13 @@ stages:
     steps: 
     - task: PowerShell@2
       displayName: Run Dependency Security Scan
+      continueOnError: true
       inputs:
         targetType: 'inline'
         script: |
           npm install -g retire
-          npm install
-          retire --exitwith 0
+          Write-Host "npm install not needed as no package.json"
+          retire "$(System.DefaultWorkingDirectory)\src\main\webapp\js"
       
 - stage: CodeQualityChecks
   displayName: Code Quality & Linting
@@ -63,27 +64,27 @@ stages:
     displayName: Multi-Language Linting Checks
     steps:
     - task: PowerShell@2
-      continueOnError: true
       displayName: JavaScript Linting (Biome)
+      continueOnError: true
       inputs:
         targetType: 'inline'
         script: |
           Invoke-WebRequest -Uri "https://github.com/biomejs/biome/releases/download/%40biomejs%2Fbiome%402.3.8/biome-win32-x64.exe" -OutFile "$(Agent.ToolsDirectory)/biome.exe"
-          $(Agent.ToolsDirectory)/biome.exe lint "$(System.DefaultWorkingDirectory)\src\main\webapp\js\*.js"
+          $(Agent.ToolsDirectory)/biome.exe lint "$(System.DefaultWorkingDirectory)\src\main\webapp\js"
 
     - task: PowerShell@2
+      displayName: CSS Linting (Stylelint)
       continueOnError: true
-      displayName: CSS Linting (Stylelint)  
       inputs:
         targetType: 'inline'
         script: |
           npm install -g stylelint
           npm install -g stylelint-config-standard
-          stylelint "$(System.DefaultWorkingDirectory)\src\*.css"
+          stylelint "$(System.DefaultWorkingDirectory)\src\main\webapp\css"
 
     - task: PowerShell@2
-      continueOnError: true
       displayName: YAML Linting (yamllint)
+      continueOnError: true
       inputs:
         targetType: 'inline'
         script: |
@@ -91,8 +92,8 @@ stages:
           yamllint $(System.DefaultWorkingDirectory)
 
     - task: PowerShell@2
-      continueOnError: true
       displayName: Markdown Linting (markdownlint)
+      continueOnError: true
       inputs:
         targetType: 'inline'
         script: |
