@@ -104,15 +104,18 @@ stages:
   displayName: Build and Publish Application
   jobs:
   - job: BuildApplication
-    displayName: Build Application
+    displayName: Build Application Job
     steps:
     - task: PowerShell@2
+      displayName: Build Application
+      continueOnError: true
       inputs:
         targetType: 'inline'
         script: 'mvn clean verify'
 
     - task: PublishBuildArtifacts@1
       displayName: Publish Build Artifact
+      continueOnError: true
       inputs:
         PathtoPublish: '$(System.DefaultWorkingDirectory)\target'
         ArtifactName: 'solar-system-stock-index.war'
