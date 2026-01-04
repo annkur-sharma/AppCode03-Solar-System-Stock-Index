@@ -129,3 +129,12 @@ stages:
         targetFolder: '/tmp/app'
         cleanTargetFolder: true
         readyTimeout: '20000'
+
+    - task: SSH@0
+      inputs:
+        sshEndpoint: 'SSH-SC-04JAN2026'
+        runOptions: 'inline'
+        inline: |
+          sudo rm -r /var/lib/tomcat9/webapps/solar-system-stock-index.war
+          sudo cp /tmp/app/solar-system-stock-index.war /var/lib/tomcat9/webapps
+        readyTimeout: '20000'
