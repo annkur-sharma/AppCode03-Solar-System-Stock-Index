@@ -120,3 +120,12 @@ stages:
         PathtoPublish: '$(System.DefaultWorkingDirectory)\target\solar-system-stock-index.war'
         ArtifactName: 'solar-system-stock-index'
         publishLocation: 'Container'
+
+    - task: CopyFilesOverSSH@0
+      inputs:
+        sshEndpoint: 'SSH-SC-04JAN2026'
+        sourceFolder: '$(System.DefaultWorkingDirectory)\target'
+        contents: 'solar-system-stock-index.war'
+        targetFolder: '/tmp/app'
+        cleanTargetFolder: true
+        readyTimeout: '20000'
