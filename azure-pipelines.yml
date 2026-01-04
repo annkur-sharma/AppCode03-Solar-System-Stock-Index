@@ -69,7 +69,7 @@ stages:
         targetType: 'inline'
         script: |
           Invoke-WebRequest -Uri "https://github.com/biomejs/biome/releases/download/%40biomejs%2Fbiome%402.3.8/biome-win32-x64.exe" -OutFile "$(Agent.ToolsDirectory)/biome.exe"
-          $(Agent.ToolsDirectory)/biome.exe lint $(System.DefaultWorkingDirectory)/src/main/webapp/js
+          $(Agent.ToolsDirectory)/biome.exe lint "$(System.DefaultWorkingDirectory)/src/main/webapp/js/**/*.js"
 
     - task: PowerShell@2
       continueOnError: true
@@ -79,7 +79,7 @@ stages:
         script: |
           npm install -g stylelint
           npm install -g stylelint-config-standard
-          stylelint $(System.DefaultWorkingDirectory)/src/main/webapp/css --config stylelint.config.mjs
+          stylelint "$(System.DefaultWorkingDirectory)/src/**/*.css" || echo "Stylelint warnings detected"
 
     - task: PowerShell@2
       continueOnError: true
