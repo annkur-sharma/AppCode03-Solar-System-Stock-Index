@@ -22,7 +22,9 @@ stages:
     - task: PowerShell@2
       inputs:
         targetType: 'inline'
-        script: 'sonar-scanner -D sonar.token=$(SONAR_TOKEN)'
+        script: |
+          mvn clean verify
+          sonar-scanner -D sonar.token=$(SONAR_TOKEN)
 
   - job: CheckstyleScanJob
     displayName: Checkstyle CLI Scan (Static Code Analysis)
@@ -38,7 +40,7 @@ stages:
         java -jar checkstyle-10.12.4-all.jar \
           -c checkstyle.xml \
           src/main/java
-      displayName: Run Checkstyle
+      displayName: Run Checkstyle CLI
       continueOnError: true
 
 # - stage: SoftwareCompositionAnalysis
