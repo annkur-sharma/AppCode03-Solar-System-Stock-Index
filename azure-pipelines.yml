@@ -7,7 +7,8 @@ trigger:
 - main
 
 pool:
-  vmImage: ubuntu-latest
+  name: Default
+  # vmImage: ubuntu-latest
 
 variables:
 - group: Project03-VariableGroup-Dev
@@ -20,6 +21,8 @@ stages:
     displayName: SonarQube (Static Code Analysis)
     steps:
     - task: PowerShell@2
+      displayName: Run SonarQube CLI
+      continueOnError: true
       inputs:
         targetType: 'inline'
         script: |
@@ -29,34 +32,29 @@ stages:
   - job: CheckstyleScanJob
     displayName: Checkstyle CLI Scan (Static Code Analysis)
     steps:
-    - task: JavaToolInstaller@0
-      inputs:
-        versionSpec: '17'
-        jdkArchitectureOption: 'x64'
-        jdkSourceOption: 'PreInstalled'
-
-    - script: |
-        wget https://github.com/checkstyle/checkstyle/releases/download/checkstyle-10.12.4/checkstyle-10.12.4-all.jar
-        java -jar checkstyle-10.12.4-all.jar \
-          -c checkstyle.xml \
-          src/main/java
+    - task: PowerShell@2
       displayName: Run Checkstyle CLI
       continueOnError: true
+      inputs:
+        targetType: 'inline'
+        script: |
+          mvn clean verify
+          mvn checkstyle:check
 
-# - stage: SoftwareCompositionAnalysis
-#   displayName: Software Composition Analysis (Dependency Security)
-#   jobs: 
-#   - job: DependencyVulnerabilityScan
-#     displayName: Dependency Vulnerability Scan (Retire.js)
-#     steps: 
-#     - task: PowerShell@2
-#       displayName: Run Dependency Security Scan
-#       inputs:
-#         targetType: 'inline'
-#         script: |
-#           npm install -g retire
-#           npm install
-#           retire --exitwith 0
+- stage: SoftwareCompositionAnalysis
+  displayName: Software Composition Analysis (Dependency Security)
+  jobs: 
+  - job: DependencyVulnerabilityScan
+    displayName: Dependency Vulnerability Scan (Retire.js)
+    steps: 
+    - task: PowerShell@2
+      displayName: Run Dependency Security Scan
+      inputs:
+        targetType: 'inline'
+        script: |
+          npm install -g retire
+          npm install
+          retire --exitwith 0
       
 - stage: CodeQualityChecks
   displayName: Code Quality & Linting
@@ -71,7 +69,7 @@ stages:
         targetType: 'inline'
         script: |
           Invoke-WebRequest -Uri "https://github.com/biomejs/biome/releases/download/%40biomejs%2Fbiome%402.3.8/biome-win32-x64.exe" -OutFile "$(Agent.ToolsDirectory)/biome.exe"
-          $(Agent.ToolsDirectory)/biome.exe lint $(System.DefaultWorkingDirectory)/src/
+          $(Agent.ToolsDirectory)/biome.exe lint $(System.DefaultWorkingDirectory)/src/main/webapp/js
 
     - task: PowerShell@2
       continueOnError: true
@@ -81,7 +79,7 @@ stages:
         script: |
           npm install -g stylelint
           npm install -g stylelint-config-standard
-          stylelint $(System.DefaultWorkingDirectory)/src --config stylelint.config.mjs
+          stylelint $(System.DefaultWorkingDirectory)/src/main/webapp/css --config stylelint.config.mjs
 
     - task: PowerShell@2
       continueOnError: true
@@ -99,6 +97,6 @@ stages:
         targetType: 'inline'
         script: |
           npm install -g markdownlint-cli
-          markdownlint $(System.DefaultWorkingDirectory)/
+          markdownlint $(System.DefaultWorkingDirectory)
 
     
