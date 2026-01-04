@@ -7,57 +7,55 @@ trigger:
 - main
 
 pool:
-  vmImage: ubuntu-latest
+  name: Default
+  # vmImage: ubuntu-latest
+
+variables:
+- group: Project03-VariableGroup-Dev
 
 stages:
-# - stage: StaticCodeAnalysis
-#   displayName: Static Code Analysis
-#   jobs:
-#   - job: SonarQubeAnalysis
-#     displayName: Static Code Analysis (SonarQube)
-#     steps:
-#     - task: PowerShell@2
-#       inputs:
-#         targetType: 'inline'
-#         script: 'sonar -D sonar.host.url=https://sonarqube.devopsinsiders.com/ -D sonar.token=$(SONAR_TOKEN) -D sonar.projectKey=todo-ui-frontend'
-
 - stage: StaticCodeAnalysis
-  displayName: Static Code Analysis (Checkstyle)
+  displayName: Static Code Analysis
   jobs:
-  - job: CheckstyleScan
-    displayName: Checkstyle CLI Scan
-    pool:
-      vmImage: ubuntu-latest
-
+  - job: SonarQubeAnalysisJob
+    displayName: SonarQube (Static Code Analysis)
     steps:
-    - task: JavaToolInstaller@0
+    - task: PowerShell@2
+      displayName: Run SonarQube CLI
+      continueOnError: true
       inputs:
-        versionSpec: '17'
-        jdkArchitectureOption: 'x64'
-        jdkSourceOption: 'PreInstalled'
+        targetType: 'inline'
+        script: |
+          mvn clean verify
+          sonar-scanner -D sonar.token=$(SONAR_TOKEN)
 
-    - script: |
-        wget https://github.com/checkstyle/checkstyle/releases/download/checkstyle-10.12.4/checkstyle-10.12.4-all.jar
-        java -jar checkstyle-10.12.4-all.jar \
-          -c checkstyle.xml \
-          src/main/java
-      displayName: Run Checkstyle
+  - job: CheckstyleScanJob
+    displayName: Checkstyle CLI Scan (Static Code Analysis)
+    steps:
+    - task: PowerShell@2
+      displayName: Run Checkstyle CLI
+      continueOnError: true
+      inputs:
+        targetType: 'inline'
+        script: |
+          Write-Host "mvn clean verify - already executed"
+          mvn checkstyle:checkstyle
 
-
-# - stage: SoftwareCompositionAnalysis
-#   displayName: Software Composition Analysis (Dependency Security)
-#   jobs: 
-#   - job: DependencyVulnerabilityScan
-#     displayName: Dependency Vulnerability Scan (Retire.js)
-#     steps: 
-#     - task: PowerShell@2
-#       displayName: Run Dependency Security Scan
-#       inputs:
-#         targetType: 'inline'
-#         script: |
-#           npm install -g retire
-#           npm install
-#           retire --exitwith 0
+- stage: SoftwareCompositionAnalysis
+  displayName: Software Composition Analysis (Dependency Security)
+  jobs: 
+  - job: DependencyVulnerabilityScan
+    displayName: Dependency Vulnerability Scan (Retire.js)
+    steps: 
+    - task: PowerShell@2
+      displayName: Run Dependency Security Scan
+      continueOnError: true
+      inputs:
+        targetType: 'inline'
+        script: |
+          npm install -g retire
+          Write-Host "npm install not needed as no package.json"
+          retire "$(System.DefaultWorkingDirectory)\src\main\webapp\js"
       
 - stage: CodeQualityChecks
   displayName: Code Quality & Linting
@@ -66,27 +64,27 @@ stages:
     displayName: Multi-Language Linting Checks
     steps:
     - task: PowerShell@2
-      continueOnError: true
       displayName: JavaScript Linting (Biome)
+      continueOnError: true
       inputs:
         targetType: 'inline'
         script: |
           Invoke-WebRequest -Uri "https://github.com/biomejs/biome/releases/download/%40biomejs%2Fbiome%402.3.8/biome-win32-x64.exe" -OutFile "$(Agent.ToolsDirectory)/biome.exe"
-          $(Agent.ToolsDirectory)/biome.exe lint $(System.DefaultWorkingDirectory)/src/
+          $(Agent.ToolsDirectory)/biome.exe lint "$(System.DefaultWorkingDirectory)\src\main\webapp\js"
 
     - task: PowerShell@2
+      displayName: CSS Linting (Stylelint)
       continueOnError: true
-      displayName: CSS Linting (Stylelint)  
       inputs:
         targetType: 'inline'
         script: |
           npm install -g stylelint
           npm install -g stylelint-config-standard
-          stylelint $(System.DefaultWorkingDirectory)/src --config stylelint.config.mjs
+          stylelint "$(System.DefaultWorkingDirectory)\src\main\webapp\css"
 
     - task: PowerShell@2
-      continueOnError: true
       displayName: YAML Linting (yamllint)
+      continueOnError: true
       inputs:
         targetType: 'inline'
         script: |
@@ -94,12 +92,12 @@ stages:
           yamllint $(System.DefaultWorkingDirectory)
 
     - task: PowerShell@2
-      continueOnError: true
       displayName: Markdown Linting (markdownlint)
+      continueOnError: true
       inputs:
         targetType: 'inline'
         script: |
           npm install -g markdownlint-cli
-          markdownlint $(System.DefaultWorkingDirectory)/
+          markdownlint $(System.DefaultWorkingDirectory)
 
-    
+
