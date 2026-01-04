@@ -21,20 +21,43 @@ stages:
 #         targetType: 'inline'
 #         script: 'sonar -D sonar.host.url=https://sonarqube.devopsinsiders.com/ -D sonar.token=$(SONAR_TOKEN) -D sonar.projectKey=todo-ui-frontend'
 
-- stage: SoftwareCompositionAnalysis
-  displayName: Software Composition Analysis (Dependency Security)
-  jobs: 
-  - job: DependencyVulnerabilityScan
-    displayName: Dependency Vulnerability Scan (Retire.js)
-    steps: 
-    - task: PowerShell@2
-      displayName: Run Dependency Security Scan
+- stage: StaticCodeAnalysis
+  displayName: Static Code Analysis (Checkstyle)
+  jobs:
+  - job: CheckstyleScan
+    displayName: Checkstyle CLI Scan
+    pool:
+      vmImage: ubuntu-latest
+
+    steps:
+    - task: JavaToolInstaller@0
       inputs:
-        targetType: 'inline'
-        script: |
-          npm install -g retire
-          npm install
-          retire --exitwith 0
+        versionSpec: '17'
+        jdkArchitectureOption: 'x64'
+        jdkSourceOption: 'PreInstalled'
+
+    - script: |
+        wget https://github.com/checkstyle/checkstyle/releases/download/checkstyle-10.12.4/checkstyle-10.12.4-all.jar
+        java -jar checkstyle-10.12.4-all.jar \
+          -c checkstyle.xml \
+          src/main/java
+      displayName: Run Checkstyle
+
+
+# - stage: SoftwareCompositionAnalysis
+#   displayName: Software Composition Analysis (Dependency Security)
+#   jobs: 
+#   - job: DependencyVulnerabilityScan
+#     displayName: Dependency Vulnerability Scan (Retire.js)
+#     steps: 
+#     - task: PowerShell@2
+#       displayName: Run Dependency Security Scan
+#       inputs:
+#         targetType: 'inline'
+#         script: |
+#           npm install -g retire
+#           npm install
+#           retire --exitwith 0
       
 - stage: CodeQualityChecks
   displayName: Code Quality & Linting
