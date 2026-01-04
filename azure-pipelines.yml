@@ -117,6 +117,6 @@ stages:
       displayName: Publish Build Artifact
       continueOnError: true
       inputs:
-        PathtoPublish: '$(System.DefaultWorkingDirectory)\target'
-        ArtifactName: 'solar-system-stock-index.war'
+        PathtoPublish: '$(System.DefaultWorkingDirectory)\target\solar-system-stock-index.war'
+        ArtifactName: 'solar-system-stock-index'
         publishLocation: 'Container'
