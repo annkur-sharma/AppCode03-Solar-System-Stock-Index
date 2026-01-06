@@ -1,0 +1,142 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- main
+
+pool:
+  name: Default
+  # vmImage: ubuntu-latest
+
+variables:
+- group: Project03-VariableGroup-Dev
+
+stages:
+- stage: StaticCodeAnalysis
+  displayName: Static Code Analysis
+  jobs:
+  - job: SonarQubeAnalysisJob
+    displayName: SonarQube (Static Code Analysis)
+    steps:
+    - task: PowerShell@2
+      displayName: Run SonarQube CLI
+      continueOnError: true
+      inputs:
+        targetType: 'inline'
+        script: |
+          mvn clean verify
+          sonar-scanner -D sonar.token=$(SONAR_TOKEN)
+
+  - job: CheckstyleScanJob
+    displayName: Checkstyle CLI Scan (Static Code Analysis)
+    steps:
+    - task: PowerShell@2
+      displayName: Run Checkstyle CLI
+      continueOnError: true
+      inputs:
+        targetType: 'inline'
+        script: |
+          Write-Host "mvn clean verify - already executed"
+          mvn checkstyle:checkstyle
+
+- stage: SoftwareCompositionAnalysis
+  displayName: Software Composition Analysis (Dependency Security)
+  jobs: 
+  - job: DependencyVulnerabilityScan
+    displayName: Dependency Vulnerability Scan (Retire.js)
+    steps: 
+    - task: PowerShell@2
+      displayName: Run Dependency Security Scan
+      continueOnError: true
+      inputs:
+        targetType: 'inline'
+        script: |
+          npm install -g retire
+          Write-Host "npm install not needed as no package.json"
+          retire "$(System.DefaultWorkingDirectory)\src\main\webapp\js"
+      
+- stage: CodeQualityChecks
+  displayName: Code Quality & Linting
+  jobs:
+  - job: LintingChecks
+    displayName: Multi-Language Linting Checks
+    steps:
+    - task: PowerShell@2
+      displayName: JavaScript Linting (Biome)
+      continueOnError: true
+      inputs:
+        targetType: 'inline'
+        script: |
+          Invoke-WebRequest -Uri "https://github.com/biomejs/biome/releases/download/%40biomejs%2Fbiome%402.3.8/biome-win32-x64.exe" -OutFile "$(Agent.ToolsDirectory)/biome.exe"
+          $(Agent.ToolsDirectory)/biome.exe lint "$(System.DefaultWorkingDirectory)\src\main\webapp\js"
+
+    - task: PowerShell@2
+      displayName: CSS Linting (Stylelint)
+      continueOnError: true
+      inputs:
+        targetType: 'inline'
+        script: |
+          npm install -g stylelint
+          npm install -g stylelint-config-standard
+          stylelint "$(System.DefaultWorkingDirectory)\src\main\webapp\css"
+
+    - task: PowerShell@2
+      displayName: YAML Linting (yamllint)
+      continueOnError: true
+      inputs:
+        targetType: 'inline'
+        script: |
+          pip install --user yamllint
+          yamllint $(System.DefaultWorkingDirectory)
+
+    - task: PowerShell@2
+      displayName: Markdown Linting (markdownlint)
+      continueOnError: true
+      inputs:
+        targetType: 'inline'
+        script: |
+          npm install -g markdownlint-cli
+          markdownlint $(System.DefaultWorkingDirectory)
+
+- stage: BuildAndPublish
+  displayName: Build and Publish Application
+  jobs:
+  - job: BuildApplication
+    displayName: Build Application Job
+    steps:
+    - task: PowerShell@2
+      displayName: Build Application
+      continueOnError: true
+      inputs:
+        targetType: 'inline'
+        script: 'mvn clean verify'
+
+    - task: PublishBuildArtifacts@1
+      displayName: Publish Build Artifacts
+      continueOnError: true
+      inputs:
+        PathtoPublish: '$(System.DefaultWorkingDirectory)\target\solar-system-stock-index.war'
+        ArtifactName: 'solar-system-stock-index'
+        publishLocation: 'Container'
+
+    - task: CopyFilesOverSSH@0
+      displayName: Copy Files to VM (Over SSH)
+      inputs:
+        sshEndpoint: 'SSH-SC-04JAN2026'
+        sourceFolder: '$(System.DefaultWorkingDirectory)\target'
+        contents: 'solar-system-stock-index.war'
+        targetFolder: '/tmp/app'
+        cleanTargetFolder: true
+        readyTimeout: '20000'
+
+    - task: SSH@0
+      displayName: Copy Files to Tomcat Server
+      inputs:
+        sshEndpoint: 'SSH-SC-04JAN2026'
+        runOptions: 'inline'
+        inline: |
+          sudo rm -r /var/lib/tomcat9/webapps/solar-system-stock-index.war
+          sudo cp /tmp/app/solar-system-stock-index.war /var/lib/tomcat9/webapps
+        readyTimeout: '20000'
