@@ -120,4 +120,9 @@ jobs:
       if: always()
       shell: pwsh
       run: |
-        Remove-Item $env:PEM_PATH -Force -ErrorAction SilentlyContinue
+        if ($env:PEM_PATH -and (Test-Path $env:PEM_PATH)) {
+            Remove-Item $env:PEM_PATH -Force
+            Write-Host "PEM file cleaned up"
+        } else {
+            Write-Host "PEM_PATH not set or file does not exist. Skipping cleanup."
+        }
