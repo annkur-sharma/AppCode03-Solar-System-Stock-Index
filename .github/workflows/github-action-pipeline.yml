@@ -1,0 +1,122 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  VM_IP: 20.213.8.7
+  VM_USER: azureuser
+  KEYVAULT_NAME: your-keyvault-name
+  PEM_SECRET_NAME: RG01ANKUR04VM04_KEY_SSH
+
+jobs:
+  build-and-deploy:
+    runs-on: windows-latest
+
+    steps:
+    # -------------------------------
+    # Checkout Code
+    # -------------------------------
+    - name: Checkout Code
+      uses: actions/checkout@v3
+
+    # -------------------------------
+    # Build Application
+    # -------------------------------
+    - name: Build Application
+      shell: pwsh
+      run: |
+        mvn clean verify
+
+    # -------------------------------
+    # Upload Artifact
+    # -------------------------------
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: app-artifact
+        path: target/*.war
+
+    # -------------------------------
+    # Azure Login (OIDC / SP)
+    # -------------------------------
+    - name: Azure Login
+      uses: azure/login@v1
+      with:
+        creds: |
+          {
+            "clientId": "${{ secrets.AZURE_CLIENT_ID }}",
+            "clientSecret": "${{ secrets.AZURE_CLIENT_SECRET }}",
+            "tenantId": "${{ secrets.AZURE_TENANT_ID }}",
+            "subscriptionId": "${{ secrets.AZURE_SUBSCRIPTION_ID }}"
+          }
+
+    # -------------------------------
+    # Fetch PEM from Azure Key Vault
+    # -------------------------------
+    - name: Get SSH PEM from Azure Key Vault
+      id: getpem
+      uses: azure/get-keyvault-secrets@v1
+      with:
+        keyvault: ${{ env.KEYVAULT_NAME }}
+        secrets: ${{ env.PEM_SECRET_NAME }}
+
+    # -------------------------------
+    # Create PEM File Securely
+    # -------------------------------
+    - name: Create SSH PEM File
+      shell: pwsh
+      run: |
+        $pemPath = "$env:TEMP\vm_key.pem"
+
+        "${{ steps.getpem.outputs.RG01ANKUR04VM04_KEY_SSH }}" |
+          Out-File -FilePath $pemPath -Encoding ascii -Force
+
+        icacls $pemPath /inheritance:r
+        icacls $pemPath /grant:r "$($env:USERNAME):R"
+
+        echo "PEM_PATH=$pemPath" >> $GITHUB_ENV
+
+    # -------------------------------
+    # Copy WAR to VM (SCP)
+    # -------------------------------
+    - name: Copy WAR to VM
+      shell: pwsh
+      run: |
+        $pemPath = $env:PEM_PATH
+        $sourceFile = "target/*.war"
+
+        ssh -i $pemPath -o StrictHostKeyChecking=accept-new `
+          $env:VM_USER@$env:VM_IP "sudo mkdir -p /tmp/app"
+
+        scp -i $pemPath -o StrictHostKeyChecking=accept-new `
+          $sourceFile $env:VM_USER@$env:VM_IP:/tmp/app/
+
+        ssh -i $pemPath -o StrictHostKeyChecking=accept-new `
+          $env:VM_USER@$env:VM_IP "ls -lh /tmp/app"
+
+    # -------------------------------
+    # Deploy on VM
+    # -------------------------------
+    - name: Deploy Application
+      shell: pwsh
+      run: |
+        $pemPath = $env:PEM_PATH
+
+        ssh -i $pemPath -o StrictHostKeyChecking=accept-new `
+          $env:VM_USER@$env:VM_IP `
+          "sudo cp /tmp/app/*.war /home/azureuser/appfolder"
+
+        ssh -i $pemPath -o StrictHostKeyChecking=accept-new `
+          $env:VM_USER@$env:VM_IP "ls -lh /home/azureuser/appfolder"
+
+    # -------------------------------
+    # Cleanup PEM (Always)
+    # -------------------------------
+    - name: Cleanup SSH PEM
+      if: always()
+      shell: pwsh
+      run: |
+        Remove-Item $env:PEM_PATH -Force -ErrorAction SilentlyContinue
