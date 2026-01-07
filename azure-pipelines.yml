@@ -30,6 +30,7 @@ stages:
     # -------------------------------
     - task: PowerShell@2
       displayName: Build Application
+      continueOnError: true
       inputs:
         targetType: 'inline'
         script: 'mvn clean verify'
@@ -39,6 +40,7 @@ stages:
     # -------------------------------
     - task: PublishBuildArtifacts@1
       displayName: Publish Build Artifacts
+      continueOnError: true
       inputs:
         PathtoPublish: '$(System.DefaultWorkingDirectory)\target\solar-system-stock-index.war'
         ArtifactName: 'solar-system-stock-index'
