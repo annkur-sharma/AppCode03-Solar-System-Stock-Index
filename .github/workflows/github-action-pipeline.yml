@@ -72,8 +72,7 @@ jobs:
       run: |
         $pemPath = "$env:TEMP\vm_key.pem"
 
-        "${{ steps.getpem.outputs.RG01ANKUR04VM04_KEY_SSH }}" |
-          Out-File -FilePath $pemPath -Encoding ascii -Force
+        "${{ steps.getpem.outputs.RG01ANKUR04VM04_KEY_SSH }}" | Out-File -FilePath $pemPath -Encoding ascii -Force
 
         icacls $pemPath /inheritance:r
         icacls $pemPath /grant:r "$($env:USERNAME):R"
@@ -89,14 +88,11 @@ jobs:
         $pemPath = $env:PEM_PATH
         $sourceFile = "target/*.war"
 
-        ssh -i $pemPath -o StrictHostKeyChecking=accept-new `
-          $env:VM_USER@$env:VM_IP "sudo mkdir -p /tmp/app"
+        ssh -i $pemPath -o StrictHostKeyChecking=accept-new $env:VM_USER@$env:VM_IP "sudo mkdir -p /tmp/app"
 
-        scp -i $pemPath -o StrictHostKeyChecking=accept-new `
-          $sourceFile $env:VM_USER@$env:VM_IP:/tmp/app/
+        scp -i $pemPath -o StrictHostKeyChecking=accept-new $sourceFile $env:VM_USER@$env:VM_IP:/tmp/app/
 
-        ssh -i $pemPath -o StrictHostKeyChecking=accept-new `
-          $env:VM_USER@$env:VM_IP "ls -lh /tmp/app"
+        ssh -i $pemPath -o StrictHostKeyChecking=accept-new $env:VM_USER@$env:VM_IP "ls -lh /tmp/app"
 
     # -------------------------------
     # Deploy on VM
@@ -106,12 +102,9 @@ jobs:
       run: |
         $pemPath = $env:PEM_PATH
 
-        ssh -i $pemPath -o StrictHostKeyChecking=accept-new `
-          $env:VM_USER@$env:VM_IP `
-          "sudo cp /tmp/app/*.war /home/azureuser/appfolder"
+        ssh -i $pemPath -o StrictHostKeyChecking=accept-new $env:VM_USER@$env:VM_IP "sudo cp /tmp/app/*.war /home/azureuser/appfolder"
 
-        ssh -i $pemPath -o StrictHostKeyChecking=accept-new `
-          $env:VM_USER@$env:VM_IP "ls -lh /home/azureuser/appfolder"
+        ssh -i $pemPath -o StrictHostKeyChecking=accept-new $env:VM_USER@$env:VM_IP "ls -lh /home/azureuser/appfolder"
 
     # -------------------------------
     # Cleanup PEM (Always)
