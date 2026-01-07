@@ -12,6 +12,10 @@ pool:
 
 variables:
 - group: Project03-VariableGroup-Dev
+- group: KeyVaultVariableGroup   # <-- Key Vault linked variable group
+
+- name: vm_Ip
+  value: 20.213.8.7
 
 stages:
 - stage: BuildAndPublish
@@ -20,37 +24,79 @@ stages:
   - job: BuildApplication
     displayName: Build Application Job
     steps:
+      
+    # -------------------------------
+    # Build
+    # -------------------------------
     - task: PowerShell@2
       displayName: Build Application
-      continueOnError: true
       inputs:
         targetType: 'inline'
         script: 'mvn clean verify'
 
+    # -------------------------------
+    # Publish
+    # -------------------------------
     - task: PublishBuildArtifacts@1
       displayName: Publish Build Artifacts
-      continueOnError: true
       inputs:
         PathtoPublish: '$(System.DefaultWorkingDirectory)\target\solar-system-stock-index.war'
         ArtifactName: 'solar-system-stock-index'
         publishLocation: 'Container'
 
-    - task: CopyFilesOverSSH@0
-      displayName: Copy Files to VM (Over SSH)
+    # -------------------------------
+    # Create PEM from Key Vault
+    # -------------------------------
+    - task: PowerShell@2
+      displayName: Create SSH PEM from Key Vault
       inputs:
-        sshEndpoint: 'SSH-SC-04JAN2026'
-        sourceFolder: '$(System.DefaultWorkingDirectory)\target'
-        contents: 'solar-system-stock-index.war'
-        targetFolder: '/tmp/app'
-        cleanTargetFolder: true
-        readyTimeout: '20000'
+        targetType: inline
+        script: |
+          $pemPath = "$(Agent.TempDirectory)\vm_key.pem"
 
-    - task: SSH@0
-      displayName: Copy Files to Tomcat Server
+          "$(rg01ankur04vm04keyssh)" | Out-File -FilePath $pemPath -Encoding ascii -Force
+
+          icacls $pemPath /inheritance:r
+          icacls $pemPath /grant:r "$($env:USERNAME):R"
+
+          Write-Host "PEM created at $pemPath"
+
+    # -------------------------------
+    # SCP WAR to VM
+    # -------------------------------
+    - task: PowerShell@2
+      displayName: Copy WAR to VM (SCP)
       inputs:
-        sshEndpoint: 'SSH-SC-04JAN2026'
-        runOptions: 'inline'
-        inline: |
-          sudo rm -r /var/lib/tomcat9/webapps/solar-system-stock-index.war
-          sudo cp /tmp/app/solar-system-stock-index.war /var/lib/tomcat9/webapps
-        readyTimeout: '20000'
+        targetType: inline
+        script: |
+          $pemPath = "$(Agent.TempDirectory)\vm_key.pem"
+          $sourceFile = "$(System.DefaultWorkingDirectory)\target\solar-system-stock-index.war"
+          $vmIp = "$(vm_Ip)"
+
+          ssh -i $pemPath -o StrictHostKeyChecking=no azureuser@$vmIp "sudo mkdir -p /tmp/app"
+          scp -i $pemPath -o StrictHostKeyChecking=no $sourceFile azureuser@$vmIp:/tmp/app/
+
+    # -------------------------------
+    # SSH: Deploy to Tomcat
+    # -------------------------------
+    # ssh -i $pemPath -o StrictHostKeyChecking=no azureuser@$vmIp "sudo rm -f /var/lib/tomcat9/webapps/solar-system-stock-index.war &&  sudo cp /tmp/app/solar-system-stock-index.war /var/lib/tomcat9/webapps/"
+    - task: PowerShell@2
+      displayName: Deploy WAR to Tomcat
+      inputs:
+        targetType: inline
+        script: |
+          $pemPath = "$(Agent.TempDirectory)\vm_key.pem"
+          $vmIp = "$(vm_Ip)"
+
+          ssh -i $pemPath -o StrictHostKeyChecking=no azureuser@$vmIp "sudo cp /tmp/app/solar-system-stock-index.war /home/azureuser/appfolder"
+
+    # -------------------------------
+    # Cleanup PEM (always)
+    # -------------------------------
+    - task: PowerShell@2
+      displayName: Cleanup SSH Key
+      condition: always()
+      inputs:
+        targetType: inline
+        script: |
+          Remove-Item "$(Agent.TempDirectory)\vm_key.pem" -Force -ErrorAction SilentlyContinue
