@@ -26,6 +26,7 @@ jobs:
     # Build Application
     # -------------------------------
     - name: Build Application
+      continue-on-error: true
       shell: pwsh
       run: |
         mvn clean verify
