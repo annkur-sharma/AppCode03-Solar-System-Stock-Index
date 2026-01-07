@@ -8,8 +8,8 @@ on:
 env:
   VM_IP: 20.213.8.7
   VM_USER: azureuser
-  KEYVAULT_NAME: your-keyvault-name
-  PEM_SECRET_NAME: RG01ANKUR04VM04_KEY_SSH
+  KEYVAULT_NAME: ankurKeyVault6
+  PEM_SECRET_NAME: rg01ankur04vm04keyssh
 
 jobs:
   build-and-deploy:
