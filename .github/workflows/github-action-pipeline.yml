@@ -82,6 +82,22 @@ jobs:
         echo "PEM_PATH=$pemPath" >> $env:GITHUB_ENV
 
     # -------------------------------
+    # Fix PEM file permissions (Windows)
+    # -------------------------------
+    - name: Fix PEM file permissions (Windows)
+      shell: pwsh
+      run: |
+        $pemPath = $env:PEM_PATH
+
+        # Remove inherited permissions
+        icacls $pemPath /inheritance:r
+
+        # Grant access ONLY to current user
+        icacls $pemPath /grant:r "$($env:USERNAME):(R)"
+
+        Write-Host "PEM permissions hardened"
+
+    # -------------------------------
     # Copy WAR to VM (SCP)
     # -------------------------------
     - name: Copy WAR to VM
