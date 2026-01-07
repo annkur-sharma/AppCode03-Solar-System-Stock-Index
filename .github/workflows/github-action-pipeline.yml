@@ -127,10 +127,18 @@ jobs:
     - name: Cleanup SSH PEM
       if: always()
       shell: pwsh
+      continue-on-error: true
       run: |
         if ($env:PEM_PATH -and (Test-Path $env:PEM_PATH)) {
+        
+            # Re-grant full control to current user
+            icacls $env:PEM_PATH /grant "$($env:USERNAME):(F)" | Out-Null
+
+            # Remove file
             Remove-Item $env:PEM_PATH -Force
-            Write-Host "PEM file cleaned up"
-        } else {
+
+            Write-Host "PEM file cleaned up successfully"
+        }
+        else {
             Write-Host "PEM_PATH not set or file does not exist. Skipping cleanup."
         }
