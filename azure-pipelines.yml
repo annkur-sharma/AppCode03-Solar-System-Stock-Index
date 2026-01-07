@@ -79,7 +79,7 @@ stages:
           scp -i $pemPath -o StrictHostKeyChecking=no $sourceFile azureuser@${vmIp}:/tmp/app/
 
           # 👇 List contents of /tmp/app on VM
-          ssh -i $pemPath -o StrictHostKeyChecking=no azureuser@${vmIp} "echo '=== Contents of /tmp/app ===' ls -lh /tmp/app"
+          ssh -i $pemPath -o StrictHostKeyChecking=no azureuser@${vmIp} "ls -lh /tmp/app"
 
     # -------------------------------
     # SSH: Deploy to Tomcat
@@ -96,7 +96,7 @@ stages:
           ssh -i $pemPath -o StrictHostKeyChecking=no azureuser@${vmIp} "sudo cp /tmp/app/solar-system-stock-index.war /home/azureuser/appfolder"
 
           # 👇 List contents after deployment
-          ssh -i $pemPath -o StrictHostKeyChecking=no azureuser@${vmIp} "echo '=== Contents of /home/azureuser/appfolder ===' ls -lh /home/azureuser/appfolder"
+          ssh -i $pemPath -o StrictHostKeyChecking=no azureuser@${vmIp} "ls -lh /home/azureuser/appfolder"
 
     # -------------------------------
     # Cleanup PEM (always)
