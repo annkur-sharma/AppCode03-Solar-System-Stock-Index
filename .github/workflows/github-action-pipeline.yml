@@ -67,17 +67,19 @@ jobs:
     # -------------------------------
     # Create PEM File Securely
     # -------------------------------
-    - name: Create SSH PEM File
+    - name: Create PEM file
       shell: pwsh
       run: |
-        $pemPath = "$env:TEMP\vm_key.pem"
+        $pemPath = "$env:RUNNER_TEMP/vm_key.pem"
+        $env:rg01ankur04vm04keyssh | Out-File -FilePath $pemPath -Encoding ascii
 
-        "${{ steps.getpem.outputs.RG01ANKUR04VM04_KEY_SSH }}" | Out-File -FilePath $pemPath -Encoding ascii -Force
+        if (!(Test-Path $pemPath)) {
+            Write-Error "PEM file was not created"
+            exit 1
+        }
 
-        icacls $pemPath /inheritance:r
-        icacls $pemPath /grant:r "$($env:USERNAME):R"
-
-        echo "PEM_PATH=$pemPath" >> $GITHUB_ENV
+        Write-Host "PEM file created at $pemPath"
+        echo "PEM_PATH=$pemPath" >> $env:GITHUB_ENV
 
     # -------------------------------
     # Copy WAR to VM (SCP)
@@ -89,9 +91,7 @@ jobs:
         $sourceFile = "target/*.war"
 
         ssh -i $pemPath -o StrictHostKeyChecking=accept-new $env:VM_USER@$env:VM_IP "sudo mkdir -p /tmp/app"
-
         scp -i $pemPath -o StrictHostKeyChecking=accept-new $sourceFile $env:VM_USER@$env:VM_IP:/tmp/app/
-
         ssh -i $pemPath -o StrictHostKeyChecking=accept-new $env:VM_USER@$env:VM_IP "ls -lh /tmp/app"
 
     # -------------------------------
@@ -103,7 +103,6 @@ jobs:
         $pemPath = $env:PEM_PATH
 
         ssh -i $pemPath -o StrictHostKeyChecking=accept-new $env:VM_USER@$env:VM_IP "sudo cp /tmp/app/*.war /home/azureuser/appfolder"
-
         ssh -i $pemPath -o StrictHostKeyChecking=accept-new $env:VM_USER@$env:VM_IP "ls -lh /home/azureuser/appfolder"
 
     # -------------------------------
