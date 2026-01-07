@@ -14,13 +14,8 @@ variables:
 - group: Project03-VariableGroup-Dev
 - group: KeyVaultVariableGroup   # <-- Key Vault linked variable group
 
-# VM IP address
 - name: vm_Ip
   value: 20.213.8.7
-
-# VM username
-- name: vm_user
-  value: azureuser
 
 stages:
 - stage: BuildAndPublish
@@ -67,9 +62,6 @@ stages:
           icacls $pemPath /grant:r "$($env:USERNAME):R"
 
           Write-Host "PEM created at $pemPath"
-          
-          # Signal pipeline variable
-          Write-Host "##vso[task.setvariable variable=PEM_CREATED;issecret=true]true"
 
     # -------------------------------
     # SCP WAR to VM
@@ -82,18 +74,17 @@ stages:
           $pemPath = "$(Agent.TempDirectory)\vm_key.pem"
           $sourceFile = "$(System.DefaultWorkingDirectory)\target\solar-system-stock-index.war"
           $vmIp = "$(vm_Ip)"
-          $vmUser = "$(vm_user)"
 
-          ssh -i $pemPath -o StrictHostKeyChecking=accept-new ${vmUser}@${vmIp} "sudo mkdir -p /tmp/app"
-          scp -i $pemPath -o StrictHostKeyChecking=accept-new $sourceFile ${vmUser}@${vmIp}:/tmp/app/
+          ssh -i $pemPath -o StrictHostKeyChecking=no azureuser@${vmIp} "sudo mkdir -p /tmp/app"
+          scp -i $pemPath -o StrictHostKeyChecking=no $sourceFile azureuser@${vmIp}:/tmp/app/
 
           # 👇 List contents of /tmp/app on VM
-          ssh -i $pemPath -o StrictHostKeyChecking=accept-new ${vmUser}@${vmIp} "ls -lh /tmp/app"
+          ssh -i $pemPath -o StrictHostKeyChecking=no azureuser@${vmIp} "ls -lh /tmp/app"
 
     # -------------------------------
     # SSH: Deploy to Tomcat
     # -------------------------------
-    # ssh -i $pemPath -o StrictHostKeyChecking=accept-new azureuser@$vmIp "sudo rm -f /var/lib/tomcat9/webapps/solar-system-stock-index.war &&  sudo cp /tmp/app/solar-system-stock-index.war /var/lib/tomcat9/webapps/"
+    # ssh -i $pemPath -o StrictHostKeyChecking=no azureuser@$vmIp "sudo rm -f /var/lib/tomcat9/webapps/solar-system-stock-index.war &&  sudo cp /tmp/app/solar-system-stock-index.war /var/lib/tomcat9/webapps/"
     - task: PowerShell@2
       displayName: Deploy WAR to Tomcat
       inputs:
@@ -101,12 +92,11 @@ stages:
         script: |
           $pemPath = "$(Agent.TempDirectory)\vm_key.pem"
           $vmIp = "$(vm_Ip)"
-          $vmUser = "$(vm_user)"
 
-          ssh -i $pemPath -o StrictHostKeyChecking=accept-new ${vmUser}@${vmIp} "sudo cp /tmp/app/solar-system-stock-index.war /home/azureuser/appfolder"
+          ssh -i $pemPath -o StrictHostKeyChecking=no azureuser@${vmIp} "sudo cp /tmp/app/solar-system-stock-index.war /home/azureuser/appfolder"
 
           # 👇 List contents after deployment
-          ssh -i $pemPath -o StrictHostKeyChecking=accept-new ${vmUser}@${vmIp} "ls -lh /home/azureuser/appfolder"
+          ssh -i $pemPath -o StrictHostKeyChecking=no azureuser@${vmIp} "ls -lh /home/azureuser/appfolder"
 
     # -------------------------------
     # Cleanup PEM (always)
