@@ -75,8 +75,8 @@ stages:
           $sourceFile = "$(System.DefaultWorkingDirectory)\target\solar-system-stock-index.war"
           $vmIp = "$(vm_Ip)"
 
-          ssh -i $pemPath -o StrictHostKeyChecking=no azureuser@$vmIp "sudo mkdir -p /tmp/app"
-          scp -i $pemPath -o StrictHostKeyChecking=no $sourceFile azureuser@$vmIp:/tmp/app/
+          ssh -i $pemPath -o StrictHostKeyChecking=no azureuser@${vmIp} "sudo mkdir -p /tmp/app"
+          scp -i $pemPath -o StrictHostKeyChecking=no $sourceFile azureuser@${vmIp}:/tmp/app/
 
     # -------------------------------
     # SSH: Deploy to Tomcat
@@ -90,7 +90,7 @@ stages:
           $pemPath = "$(Agent.TempDirectory)\vm_key.pem"
           $vmIp = "$(vm_Ip)"
 
-          ssh -i $pemPath -o StrictHostKeyChecking=no azureuser@$vmIp "sudo cp /tmp/app/solar-system-stock-index.war /home/azureuser/appfolder"
+          ssh -i $pemPath -o StrictHostKeyChecking=no azureuser@${vmIp} "sudo cp /tmp/app/solar-system-stock-index.war /home/azureuser/appfolder"
 
     # -------------------------------
     # Cleanup PEM (always)
